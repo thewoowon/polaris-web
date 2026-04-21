@@ -10,6 +10,8 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyReview } from "@/lib/api/classifications";
 import { getDocument } from "@/lib/api/kb";
 import { evaluatePolicy } from "@/lib/api/policy";
+
+import { ClarifyPanel } from "./clarify-panel";
 import {
   approveReply,
   generateReply,
@@ -172,6 +174,14 @@ export function ReviewDetail({ id }: { id: number }) {
           )}
         </CardBody>
       </Card>
+
+      {data.policy_decision?.action === "request_clarification" && data.classification && (
+        <ClarifyPanel
+          reviewId={data.id}
+          topCandidates={data.classification.top_candidates}
+          reasonCodes={data.policy_decision.reason_codes}
+        />
+      )}
 
       <Card>
         <CardHeader>
