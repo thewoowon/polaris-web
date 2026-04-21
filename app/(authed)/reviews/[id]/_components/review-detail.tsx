@@ -1,0 +1,290 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { classifyReview } from "@/lib/api/classifications";
+import { evaluatePolicy } from "@/lib/api/policy";
+import {
+  approveReply,
+  generateReply,
+  publishReply,
+  regenerateReply,
+  rejectReply,
+} from "@/lib/api/replies";
+import { getReview } from "@/lib/api/reviews";
+import { qk } from "@/lib/query-keys";
+import type { PolicyAction, Sentiment } from "@/lib/schemas/enums";
+
+const SENTIMENT_TONE: Record<Sentiment, "ok" | "warning" | "danger"> = {
+  positive: "ok",
+  neutral: "warning",
+  negative: "danger",
+};
+
+const ACTION_TONE: Record<PolicyAction, "ok" | "info" | "warning" | "danger" | "neutral"> = {
+  auto_reply: "ok",
+  draft_reply: "info",
+  request_clarification: "warning",
+  route_to_human: "warning",
+  create_issue: "danger",
+  ignore: "neutral",
+};
+
+export function ReviewDetail({ id }: { id: number }) {
+  const qc = useQueryClient();
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: qk.reviews.detail(id),
+    queryFn: () => getReview(id),
+  });
+
+  const [editedText, setEditedText] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: qk.reviews.detail(id) });
+
+  const classify = useMutation({ mutationFn: () => classifyReview(id), onSuccess: invalidate });
+  const evaluate = useMutation({ mutationFn: () => evaluatePolicy(id), onSuccess: invalidate });
+  const generate = useMutation({
+    mutationFn: () => (data?.reply_draft ? regenerateReply(id) : generateReply(id)),
+    onSuccess: invalidate,
+  });
+  const approve = useMutation({
+    mutationFn: () => approveReply(id, editedText ?? undefined),
+    onSuccess: () => {
+      setEditedText(null);
+      invalidate();
+    },
+  });
+  const reject = useMutation({
+    mutationFn: () => rejectReply(id, rejectReason || "unspecified"),
+    onSuccess: () => {
+      setRejectReason("");
+      invalidate();
+    },
+  });
+  const publish = useMutation({ mutationFn: () => publishReply(id), onSuccess: invalidate });
+
+  if (isLoading) return <p className="text-sm text-zinc-500">불러오는 중…</p>;
+  if (isError || !data) {
+    return (
+      <Card>
+        <CardBody>
+          <p className="text-sm text-rose-600">
+            리뷰를 불러오지 못했습니다: {(error as Error).message}
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const draft = data.reply_draft;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Link href="/reviews" className="text-sm text-zinc-500 hover:underline">
+          ← 리뷰 목록으로
+        </Link>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">리뷰 #{data.id}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+          <Badge tone="info">{data.source}</Badge>
+          {data.rating != null && <span>★ {data.rating}</span>}
+          {data.app_version && <span>v{data.app_version}</span>}
+          {data.locale && <span>{data.locale}</span>}
+          <span>수집: {new Date(data.ingested_at).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>원문</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <p className="whitespace-pre-wrap text-sm leading-6">{data.raw_text}</p>
+          {data.raw_text !== data.normalized_text && (
+            <p className="mt-3 border-t border-dashed border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-zinc-700">
+              정규화: {data.normalized_text}
+            </p>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>분류</CardTitle>
+            <Button
+              onClick={() => classify.mutate()}
+              disabled={classify.isPending}
+              variant="secondary"
+            >
+              {data.classification ? "재분류" : "분류 실행"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {data.classification ? (
+            <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+              <Field label="카테고리">
+                <div className="flex flex-wrap gap-1">
+                  {data.classification.categories.map((c) => (
+                    <Badge key={c} tone="neutral">
+                      {c}
+                    </Badge>
+                  ))}
+                </div>
+              </Field>
+              <Field label="감성">
+                <Badge tone={SENTIMENT_TONE[data.classification.sentiment]}>
+                  {data.classification.sentiment}
+                </Badge>
+              </Field>
+              <Field label="긴급도">{data.classification.urgency}</Field>
+              <Field label="신뢰도">
+                {(data.classification.confidence * 100).toFixed(1)}%
+                {data.classification.needs_clarification && (
+                  <Badge tone="warning" className="ml-2">
+                    명확화 필요
+                  </Badge>
+                )}
+              </Field>
+              <Field label="모델">{data.classification.model_version}</Field>
+            </dl>
+          ) : (
+            <p className="text-sm text-zinc-500">아직 분류되지 않았습니다.</p>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>정책 판단</CardTitle>
+            <Button
+              onClick={() => evaluate.mutate()}
+              disabled={!data.classification || evaluate.isPending}
+              variant="secondary"
+            >
+              {data.policy_decision ? "재평가" : "정책 평가"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {data.policy_decision ? (
+            <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+              <Field label="액션">
+                <Badge tone={ACTION_TONE[data.policy_decision.action]}>
+                  {data.policy_decision.action}
+                </Badge>
+              </Field>
+              <Field label="위험 점수">{data.policy_decision.risk_score.toFixed(2)}</Field>
+              <Field label="사유">
+                <div className="flex flex-wrap gap-1">
+                  {data.policy_decision.reason_codes.map((r) => (
+                    <Badge key={r} tone="neutral">
+                      {r}
+                    </Badge>
+                  ))}
+                </div>
+              </Field>
+              <Field label="정책 버전">{data.policy_decision.policy_version}</Field>
+            </dl>
+          ) : (
+            <p className="text-sm text-zinc-500">분류 완료 후 정책을 평가할 수 있습니다.</p>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>응답 초안</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => generate.mutate()}
+                disabled={!data.classification || generate.isPending}
+              >
+                {draft ? "재생성" : "초안 생성"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {draft ? (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Badge tone="neutral">{draft.status}</Badge>
+                {draft.template_id && <Badge tone="info">tpl:{draft.template_id}</Badge>}
+                {draft.requires_human_approval && <Badge tone="warning">사람 승인 필요</Badge>}
+              </div>
+              <textarea
+                className="min-h-32 w-full rounded-md border border-zinc-300 bg-white p-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                value={editedText ?? draft.generated_text}
+                onChange={(e) => setEditedText(e.target.value)}
+                disabled={
+                  draft.status === "published" || draft.status === "rejected"
+                }
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  onClick={() => approve.mutate()}
+                  disabled={draft.status !== "pending" || approve.isPending}
+                >
+                  승인
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => publish.mutate()}
+                  disabled={draft.status !== "approved" || publish.isPending}
+                >
+                  게시
+                </Button>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="반려 사유"
+                    className="h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    disabled={draft.status === "published" || draft.status === "rejected"}
+                  />
+                  <Button
+                    variant="danger"
+                    onClick={() => reject.mutate()}
+                    disabled={
+                      draft.status === "published" ||
+                      draft.status === "rejected" ||
+                      !rejectReason.trim() ||
+                      reject.isPending
+                    }
+                  >
+                    반려
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              분류 + 정책 평가 후 초안을 생성할 수 있습니다.
+            </p>
+          )}
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</dt>
+      <dd className="mt-1">{children}</dd>
+    </div>
+  );
+}
