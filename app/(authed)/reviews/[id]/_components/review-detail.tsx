@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyReview } from "@/lib/api/classifications";
+import { getDocument } from "@/lib/api/kb";
 import { evaluatePolicy } from "@/lib/api/policy";
 import {
   approveReply,
@@ -44,13 +45,17 @@ export function ReviewDetail({ id }: { id: number }) {
 
   const [editedText, setEditedText] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [groundWithKb, setGroundWithKb] = useState(false);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.reviews.detail(id) });
 
   const classify = useMutation({ mutationFn: () => classifyReview(id), onSuccess: invalidate });
   const evaluate = useMutation({ mutationFn: () => evaluatePolicy(id), onSuccess: invalidate });
   const generate = useMutation({
-    mutationFn: () => (data?.reply_draft ? regenerateReply(id) : generateReply(id)),
+    mutationFn: () =>
+      data?.reply_draft
+        ? regenerateReply(id, { ground_with_kb: groundWithKb })
+        : generateReply(id, { ground_with_kb: groundWithKb }),
     onSuccess: invalidate,
   });
   const approve = useMutation({
@@ -202,9 +207,18 @@ export function ReviewDetail({ id }: { id: number }) {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <CardTitle>응답 초안</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={groundWithKb}
+                  onChange={(e) => setGroundWithKb(e.target.checked)}
+                  disabled={generate.isPending}
+                />
+                KB 참조
+              </label>
               <Button
                 onClick={() => generate.mutate()}
                 disabled={!data.classification || generate.isPending}
@@ -222,6 +236,14 @@ export function ReviewDetail({ id }: { id: number }) {
                 {draft.template_id && <Badge tone="info">tpl:{draft.template_id}</Badge>}
                 {draft.requires_human_approval && <Badge tone="warning">사람 승인 필요</Badge>}
               </div>
+              {draft.grounded_sources && draft.grounded_sources.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800/50">
+                  <span className="text-zinc-500">참조 문서:</span>
+                  {draft.grounded_sources.map((src) => (
+                    <GroundedRef key={src} source={src} />
+                  ))}
+                </div>
+              )}
               <textarea
                 className="min-h-32 w-full rounded-md border border-zinc-300 bg-white p-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
                 value={editedText ?? draft.generated_text}
@@ -286,5 +308,32 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</dt>
       <dd className="mt-1">{children}</dd>
     </div>
+  );
+}
+
+function GroundedRef({ source }: { source: string }) {
+  // Sources are stored as "kb:<id>"; fall back to showing the raw string.
+  const match = source.match(/^kb:(\d+)$/);
+  if (!match) {
+    return <Badge tone="neutral">{source}</Badge>;
+  }
+  const docId = Number(match[1]);
+  return <GroundedKbRef docId={docId} />;
+}
+
+function GroundedKbRef({ docId }: { docId: number }) {
+  const { data } = useQuery({
+    queryKey: qk.kb.detail(docId),
+    queryFn: () => getDocument(docId),
+    staleTime: 60_000,
+  });
+  return (
+    <Link
+      href={`/kb/${docId}`}
+      className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700 dark:hover:bg-zinc-800"
+    >
+      <span className="font-mono text-[10px] text-zinc-400">#{docId}</span>
+      <span>{data?.title ?? `kb:${docId}`}</span>
+    </Link>
   );
 }
