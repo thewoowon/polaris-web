@@ -10,12 +10,38 @@ import {
   reviewResponseSchema,
 } from "../schemas/review";
 import { type Page } from "../schemas/common";
+import type {
+  PolicyAction,
+  ReviewCategory,
+  ReviewSource,
+  Sentiment,
+} from "../schemas/enums";
+
+export type ListReviewsParams = {
+  limit?: number;
+  offset?: number;
+  source?: ReviewSource | null;
+  sentiment?: Sentiment | null;
+  action?: PolicyAction | null;
+  category?: ReviewCategory | null;
+  rating_min?: number | null;
+  q?: string | null;
+};
 
 export function listReviews(
-  params: { limit?: number; offset?: number } = {},
+  params: ListReviewsParams = {},
 ): Promise<Page<ReviewResponse>> {
   return api.get("/api/v1/reviews", {
-    query: { limit: params.limit ?? 20, offset: params.offset ?? 0 },
+    query: {
+      limit: params.limit ?? 20,
+      offset: params.offset ?? 0,
+      source: params.source ?? undefined,
+      sentiment: params.sentiment ?? undefined,
+      action: params.action ?? undefined,
+      category: params.category ?? undefined,
+      rating_min: params.rating_min ?? undefined,
+      q: params.q ?? undefined,
+    },
     schema: reviewPageSchema,
   });
 }
