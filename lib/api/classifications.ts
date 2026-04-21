@@ -1,7 +1,9 @@
 import { api } from "./client";
 import {
   type ClassificationResponse,
+  type ShadowCompareResponse,
   classificationResponseSchema,
+  shadowCompareResponseSchema,
 } from "../schemas/classification";
 import type { ReviewCategory } from "../schemas/enums";
 
@@ -23,5 +25,13 @@ export function clarifyClassification(
 ): Promise<ClassificationResponse> {
   return api.post(`/api/v1/classify/${reviewId}/clarify`, payload, {
     schema: classificationResponseSchema,
+  });
+}
+
+export function compareClassification(
+  reviewId: number,
+): Promise<ShadowCompareResponse> {
+  return api.post(`/api/v1/classify/${reviewId}/compare`, undefined, {
+    schema: shadowCompareResponseSchema,
   });
 }

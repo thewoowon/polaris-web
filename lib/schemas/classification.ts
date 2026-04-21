@@ -31,9 +31,17 @@ export const classificationPayloadSchema = z.object({
   urgency: urgencySchema,
   confidence: z.number().min(0).max(1),
   entropy: z.number().nullable().optional(),
+  ambiguity_score: z.number().nullable().optional(),
   top_candidates: z.array(topCandidateSchema).nullable().optional(),
   needs_clarification: z.boolean().default(false),
   out_of_distribution: z.boolean().default(false),
   model_version: z.string(),
 });
 export type ClassificationPayload = z.infer<typeof classificationPayloadSchema>;
+
+export const shadowCompareResponseSchema = z.object({
+  stub: classificationPayloadSchema,
+  llm: classificationPayloadSchema.nullable(),
+  llm_error: z.string().nullable(),
+});
+export type ShadowCompareResponse = z.infer<typeof shadowCompareResponseSchema>;

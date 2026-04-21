@@ -13,6 +13,7 @@ import { evaluatePolicy } from "@/lib/api/policy";
 
 import { AuditTimeline } from "./audit-timeline";
 import { ClarifyPanel } from "./clarify-panel";
+import { ShadowCompare } from "./shadow-compare";
 import {
   approveReply,
   generateReply,
@@ -175,6 +176,8 @@ export function ReviewDetail({ id }: { id: number }) {
           )}
         </CardBody>
       </Card>
+
+      {data.classification && <ShadowCompare reviewId={data.id} />}
 
       {data.policy_decision?.action === "request_clarification" && data.classification && (
         <ClarifyPanel
