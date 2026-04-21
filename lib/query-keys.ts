@@ -13,6 +13,7 @@ export const qk = {
     list: (params: { limit: number; offset: number }) => ["queue", "list", params] as const,
   },
   kb: {
-    list: (params: { limit: number; offset: number }) => ["kb", "list", params] as const,
+    list: (params: Record<string, unknown>) => ["kb", "list", params] as const,
+    detail: (id: number) => ["kb", "detail", id] as const,
   },
 } as const;
