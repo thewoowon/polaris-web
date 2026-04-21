@@ -158,6 +158,13 @@ export function ReviewDetail({ id }: { id: number }) {
                   </Badge>
                 )}
               </Field>
+              <Field label="애매도">
+                <AmbiguityDisplay
+                  score={data.classification.ambiguity_score}
+                  entropy={data.classification.entropy}
+                  topCandidates={data.classification.top_candidates}
+                />
+              </Field>
               <Field label="모델">{data.classification.model_version}</Field>
             </dl>
           ) : (
@@ -307,6 +314,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</dt>
       <dd className="mt-1">{children}</dd>
+    </div>
+  );
+}
+
+function AmbiguityDisplay({
+  score,
+  entropy,
+  topCandidates,
+}: {
+  score: number | null;
+  entropy: number | null;
+  topCandidates: Array<Record<string, unknown>> | null;
+}) {
+  if (score == null) {
+    return <span className="text-xs text-zinc-400">—</span>;
+  }
+  const tone: "ok" | "warning" | "danger" =
+    score >= 0.65 ? "danger" : score >= 0.45 ? "warning" : "ok";
+
+  // top1-top2 margin from the persisted candidate scores.
+  let margin: number | null = null;
+  if (topCandidates && topCandidates.length >= 2) {
+    const s1 = Number(topCandidates[0]?.score ?? 0);
+    const s2 = Number(topCandidates[1]?.score ?? 0);
+    if (Number.isFinite(s1) && Number.isFinite(s2)) margin = s1 - s2;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <Badge tone={tone}>{score.toFixed(2)}</Badge>
+      {entropy != null && (
+        <span className="text-zinc-500">H={entropy.toFixed(2)}</span>
+      )}
+      {margin != null && (
+        <span className="text-zinc-500">Δ={margin.toFixed(2)}</span>
+      )}
+      {score >= 0.65 && <Badge tone="warning">매우 애매</Badge>}
     </div>
   );
 }

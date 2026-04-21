@@ -15,6 +15,7 @@ export const classificationResponseSchema = z.object({
   urgency: urgencySchema,
   confidence: z.number().min(0).max(1),
   entropy: z.number().nullable(),
+  ambiguity_score: z.number().nullable(),
   top_candidates: z.array(topCandidateSchema.partial().passthrough()).nullable(),
   needs_clarification: z.boolean(),
   out_of_distribution: z.boolean(),
