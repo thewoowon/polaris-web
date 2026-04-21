@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reviews", label: "리뷰" },
   { href: "/queue", label: "검수 큐" },
   { href: "/kb", label: "지식 베이스" },
+  { href: "/audit", label: "감사 로그" },
   { href: "/settings", label: "설정" },
 ];
 

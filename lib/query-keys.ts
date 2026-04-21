@@ -6,7 +6,7 @@ export const qk = {
     highRisk: (limit: number) => ["dashboard", "high-risk", { limit }] as const,
   },
   reviews: {
-    list: (params: { limit: number; offset: number }) => ["reviews", "list", params] as const,
+    list: (params: Record<string, unknown>) => ["reviews", "list", params] as const,
     detail: (id: number) => ["reviews", "detail", id] as const,
   },
   queue: {
@@ -15,5 +15,8 @@ export const qk = {
   kb: {
     list: (params: Record<string, unknown>) => ["kb", "list", params] as const,
     detail: (id: number) => ["kb", "detail", id] as const,
+  },
+  audit: {
+    list: (params: Record<string, unknown>) => ["audit", "list", params] as const,
   },
 } as const;
