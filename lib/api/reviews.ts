@@ -9,6 +9,7 @@ import {
   reviewPageSchema,
   reviewResponseSchema,
 } from "../schemas/review";
+import { type AuditLog, auditLogSchema } from "../schemas/audit";
 import { type Page } from "../schemas/common";
 import type {
   PolicyAction,
@@ -48,6 +49,10 @@ export function listReviews(
 
 export function getReview(id: number): Promise<ReviewDetailResponse> {
   return api.get(`/api/v1/reviews/${id}`, { schema: reviewDetailResponseSchema });
+}
+
+export function getReviewAudit(id: number): Promise<AuditLog[]> {
+  return api.get(`/api/v1/reviews/${id}/audit`, { schema: z.array(auditLogSchema) });
 }
 
 export function ingestReview(payload: ReviewIngest): Promise<ReviewResponse> {

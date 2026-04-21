@@ -11,6 +11,7 @@ import { classifyReview } from "@/lib/api/classifications";
 import { getDocument } from "@/lib/api/kb";
 import { evaluatePolicy } from "@/lib/api/policy";
 
+import { AuditTimeline } from "./audit-timeline";
 import { ClarifyPanel } from "./clarify-panel";
 import {
   approveReply,
@@ -315,10 +316,13 @@ export function ReviewDetail({ id }: { id: number }) {
           )}
         </CardBody>
       </Card>
+
+      <AuditTimeline reviewId={data.id} />
     </div>
   );
 }
 
+// Note: AuditTimeline is rendered at the bottom of this detail view.
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
