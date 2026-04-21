@@ -16,6 +16,15 @@ export class ApiError extends Error {
 
 type Query = Record<string, string | number | boolean | null | undefined>;
 
+type RequestOpts<T> = {
+  query?: Query;
+  body?: unknown;
+  schema?: z.ZodType<T>;
+  signal?: AbortSignal;
+  /** If true (default), auto-clear session + redirect to /login on 401. */
+  authGuard?: boolean;
+};
+
 function buildUrl(path: string, query?: Query): string {
   const url = new URL(`${API_BASE}${path.startsWith("/") ? path : `/${path}`}`);
   if (query) {
@@ -27,21 +36,36 @@ function buildUrl(path: string, query?: Query): string {
   return url.toString();
 }
 
+function readAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem("polaris.access");
+}
+
+function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem("polaris.access");
+  window.localStorage.removeItem("polaris.refresh");
+  window.localStorage.removeItem("polaris.user");
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
+}
+
 async function request<T>(
   method: string,
   path: string,
-  opts: {
-    query?: Query;
-    body?: unknown;
-    schema?: z.ZodType<T>;
-    signal?: AbortSignal;
-  } = {},
+  opts: RequestOpts<T> = {},
 ): Promise<T> {
-  const { query, body, schema, signal } = opts;
+  const { query, body, schema, signal, authGuard = true } = opts;
+
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["content-type"] = "application/json";
+  const token = readAccessToken();
+  if (token) headers["authorization"] = `Bearer ${token}`;
 
   const res = await fetch(buildUrl(path, query), {
     method,
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
     // Next 16: fetch is uncached by default — matches what we want for API calls.
@@ -51,6 +75,10 @@ async function request<T>(
   const contentType = res.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
   const payload = isJson ? await res.json().catch(() => null) : await res.text();
+
+  if (res.status === 401 && authGuard) {
+    handleUnauthorized();
+  }
 
   if (!res.ok) {
     const message =
@@ -65,24 +93,20 @@ async function request<T>(
   }
   const parsed = schema.safeParse(payload);
   if (!parsed.success) {
-    throw new ApiError(res.status, payload, `Response failed schema validation: ${parsed.error.message}`);
+    throw new ApiError(
+      res.status,
+      payload,
+      `Response failed schema validation: ${parsed.error.message}`,
+    );
   }
   return parsed.data;
 }
 
 export const api = {
-  get: <T>(path: string, opts?: { query?: Query; schema?: z.ZodType<T>; signal?: AbortSignal }) =>
-    request<T>("GET", path, opts),
-  post: <T>(
-    path: string,
-    body?: unknown,
-    opts?: { query?: Query; schema?: z.ZodType<T>; signal?: AbortSignal },
-  ) => request<T>("POST", path, { ...opts, body }),
-  put: <T>(
-    path: string,
-    body?: unknown,
-    opts?: { query?: Query; schema?: z.ZodType<T>; signal?: AbortSignal },
-  ) => request<T>("PUT", path, { ...opts, body }),
-  delete: <T>(path: string, opts?: { query?: Query; schema?: z.ZodType<T>; signal?: AbortSignal }) =>
-    request<T>("DELETE", path, opts),
+  get: <T>(path: string, opts?: RequestOpts<T>) => request<T>("GET", path, opts),
+  post: <T>(path: string, body?: unknown, opts?: RequestOpts<T>) =>
+    request<T>("POST", path, { ...opts, body }),
+  put: <T>(path: string, body?: unknown, opts?: RequestOpts<T>) =>
+    request<T>("PUT", path, { ...opts, body }),
+  delete: <T>(path: string, opts?: RequestOpts<T>) => request<T>("DELETE", path, opts),
 };
