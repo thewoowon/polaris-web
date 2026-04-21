@@ -95,7 +95,7 @@ export function SummaryCards() {
             {highRisk.data && highRisk.data.length > 0 && (
               <ul className="space-y-2 text-sm">
                 {highRisk.data.map((h) => (
-                  <li key={`${h.review_id}-${h.created_at}`} className="flex justify-between">
+                  <li key={h.review_id} className="flex justify-between">
                     <span className="font-medium">#{h.review_id}</span>
                     <span className="text-zinc-500">
                       {h.action} · {h.category} · risk {h.risk_score.toFixed(2)}
