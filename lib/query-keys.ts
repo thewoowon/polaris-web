@@ -20,4 +20,7 @@ export const qk = {
   audit: {
     list: (params: Record<string, unknown>) => ["audit", "list", params] as const,
   },
+  policy: {
+    rules: ["policy", "rules"] as const,
+  },
 } as const;
