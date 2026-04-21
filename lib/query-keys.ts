@@ -9,6 +9,9 @@ export const qk = {
     list: (params: { limit: number; offset: number }) => ["reviews", "list", params] as const,
     detail: (id: number) => ["reviews", "detail", id] as const,
   },
+  queue: {
+    list: (params: { limit: number; offset: number }) => ["queue", "list", params] as const,
+  },
   kb: {
     list: (params: { limit: number; offset: number }) => ["kb", "list", params] as const,
   },
