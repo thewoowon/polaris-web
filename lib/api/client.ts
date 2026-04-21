@@ -37,15 +37,19 @@ function buildUrl(path: string, query?: Query): string {
 }
 
 function readAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("polaris.access");
+  if (typeof document === "undefined") return null;
+  const prefix = "polaris.access=";
+  for (const seg of document.cookie.split("; ")) {
+    if (seg.startsWith(prefix)) return decodeURIComponent(seg.slice(prefix.length));
+  }
+  return null;
 }
 
 function handleUnauthorized(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("polaris.access");
-  window.localStorage.removeItem("polaris.refresh");
-  window.localStorage.removeItem("polaris.user");
+  if (typeof document === "undefined") return;
+  for (const name of ["polaris.access", "polaris.refresh", "polaris.user"]) {
+    document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+  }
   if (window.location.pathname !== "/login") {
     window.location.href = "/login";
   }

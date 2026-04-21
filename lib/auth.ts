@@ -1,6 +1,15 @@
+// Session is stored in cookies (not localStorage) so `proxy.ts` can read
+// `polaris.access` on the server and hard-gate protected routes before any
+// HTML flashes. Cookies are non-httpOnly because the API client still needs
+// to read the access token to send it as a Bearer header.
+
 const ACCESS_KEY = "polaris.access";
 const REFRESH_KEY = "polaris.refresh";
 const USER_KEY = "polaris.user";
+
+// Token lifetimes match the backend defaults in app/core/config.py.
+const ACCESS_MAX_AGE_SEC = 30 * 60; // 30 minutes
+const REFRESH_MAX_AGE_SEC = 7 * 24 * 60 * 60; // 7 days
 
 export type StoredUser = {
   id: number;
@@ -10,19 +19,45 @@ export type StoredUser = {
   is_active: boolean;
 };
 
+function setCookie(name: string, value: string, maxAgeSec: number): void {
+  if (typeof document === "undefined") return;
+  const secure = typeof location !== "undefined" && location.protocol === "https:";
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    `Max-Age=${maxAgeSec}`,
+    "Path=/",
+    "SameSite=Lax",
+  ];
+  if (secure) parts.push("Secure");
+  document.cookie = parts.join("; ");
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${name}=`;
+  for (const segment of document.cookie.split("; ")) {
+    if (segment.startsWith(prefix)) {
+      return decodeURIComponent(segment.slice(prefix.length));
+    }
+  }
+  return null;
+}
+
+function deleteCookie(name: string): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
+}
+
 export function getAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACCESS_KEY);
+  return getCookie(ACCESS_KEY);
 }
 
 export function getRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(REFRESH_KEY);
+  return getCookie(REFRESH_KEY);
 }
 
 export function getStoredUser(): StoredUser | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(USER_KEY);
+  const raw = getCookie(USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as StoredUser;
@@ -36,14 +71,13 @@ export function storeSession(
   refresh: string,
   user: StoredUser,
 ): void {
-  window.localStorage.setItem(ACCESS_KEY, access);
-  window.localStorage.setItem(REFRESH_KEY, refresh);
-  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+  setCookie(ACCESS_KEY, access, ACCESS_MAX_AGE_SEC);
+  setCookie(REFRESH_KEY, refresh, REFRESH_MAX_AGE_SEC);
+  setCookie(USER_KEY, JSON.stringify(user), REFRESH_MAX_AGE_SEC);
 }
 
 export function clearSession(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ACCESS_KEY);
-  window.localStorage.removeItem(REFRESH_KEY);
-  window.localStorage.removeItem(USER_KEY);
+  deleteCookie(ACCESS_KEY);
+  deleteCookie(REFRESH_KEY);
+  deleteCookie(USER_KEY);
 }
