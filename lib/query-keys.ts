@@ -23,4 +23,7 @@ export const qk = {
   policy: {
     rules: ["policy", "rules"] as const,
   },
+  ingestion: {
+    status: ["ingestion", "status"] as const,
+  },
 } as const;
