@@ -65,20 +65,45 @@ export function IngestionCard() {
               <Field label="마지막 tick">{since(data.last_run_at)}</Field>
               <Field label="에러 누적">{data.error_count}</Field>
             </dl>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                활성 소스
-              </p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {data.sources.length === 0 ? (
-                  <span className="text-xs text-zinc-500">없음</span>
-                ) : (
-                  data.sources.map((s) => (
-                    <Badge key={s} tone="info">
-                      {s}
-                    </Badge>
-                  ))
-                )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  활성 소스
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {data.sources.length === 0 ? (
+                    <span className="text-xs text-zinc-500">없음</span>
+                  ) : (
+                    data.sources.map((s) => (
+                      <Badge key={s} tone="info">
+                        {s}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  Auto-pipeline
+                </p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  {data.auto_pipeline ? (
+                    <>
+                      <Badge tone="ok">on</Badge>
+                      {data.auto_classifier && (
+                        <span className="font-mono text-[11px] text-zinc-500">
+                          {data.auto_classifier}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-zinc-500">
+                        · 누적 분류 {data.total_classified.toLocaleString()}건
+                      </span>
+                    </>
+                  ) : (
+                    <Badge tone="neutral">off</Badge>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -88,18 +113,26 @@ export function IngestionCard() {
                   지난 tick 결과
                 </p>
                 <p>
-                  총 <b>{data.last_stats.total}</b>건 수집
+                  수집 <b>{data.last_stats.total}</b>건 · 자동 분류{" "}
+                  <b>{data.last_stats.classified}</b>건
                   {Object.entries(data.last_stats.per_source).map(([src, n]) => (
                     <span key={src} className="ml-2 text-zinc-500">
                       · {src}={n}
                     </span>
                   ))}
                 </p>
-                {data.last_stats.errors.length > 0 && (
+                {data.last_stats.fetch_errors.length > 0 && (
                   <ul className="mt-1 space-y-0.5 text-rose-600">
-                    {data.last_stats.errors.map((e, i) => (
-                      <li key={i}>
-                        · {e.source}: {e.error}
+                    {data.last_stats.fetch_errors.map((e, i) => (
+                      <li key={`fetch-${i}`}>· fetch {e.source}: {e.error}</li>
+                    ))}
+                  </ul>
+                )}
+                {data.last_stats.pipeline_errors.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-400">
+                    {data.last_stats.pipeline_errors.map((e, i) => (
+                      <li key={`pipe-${i}`}>
+                        · pipeline review#{e.review_id} from {e.source} 실패
                       </li>
                     ))}
                   </ul>
