@@ -4,6 +4,7 @@ const tickStatsSchema = z.object({
   ran_at: z.string(),
   total: z.number().int(),
   classified: z.number().int().default(0),
+  dedup_skipped: z.number().int().default(0),
   per_source: z.record(z.string(), z.number().int()),
   fetch_errors: z
     .array(z.object({ source: z.string(), error: z.string() }))

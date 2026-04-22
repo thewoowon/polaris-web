@@ -115,6 +115,11 @@ export function IngestionCard() {
                 <p>
                   수집 <b>{data.last_stats.total}</b>건 · 자동 분류{" "}
                   <b>{data.last_stats.classified}</b>건
+                  {data.last_stats.dedup_skipped > 0 && (
+                    <span className="ml-2 text-zinc-500">
+                      · 중복 {data.last_stats.dedup_skipped}건 스킵
+                    </span>
+                  )}
                   {Object.entries(data.last_stats.per_source).map(([src, n]) => (
                     <span key={src} className="ml-2 text-zinc-500">
                       · {src}={n}
