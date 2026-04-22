@@ -10,12 +10,28 @@ function percent(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
+// Poll every 10s so ingested-and-classified reviews show up live without
+// needing an explicit refresh. No WebSocket plumbing required at this scale.
+const DASHBOARD_REFETCH_MS = 10_000;
+
 export function SummaryCards() {
-  const summary = useQuery({ queryKey: qk.dashboard.summary, queryFn: getSummary });
-  const categories = useQuery({ queryKey: qk.dashboard.categories, queryFn: getCategories });
+  const summary = useQuery({
+    queryKey: qk.dashboard.summary,
+    queryFn: getSummary,
+    refetchInterval: DASHBOARD_REFETCH_MS,
+    refetchIntervalInBackground: false,
+  });
+  const categories = useQuery({
+    queryKey: qk.dashboard.categories,
+    queryFn: getCategories,
+    refetchInterval: DASHBOARD_REFETCH_MS,
+    refetchIntervalInBackground: false,
+  });
   const highRisk = useQuery({
     queryKey: qk.dashboard.highRisk(10),
     queryFn: () => getHighRisk(10),
+    refetchInterval: DASHBOARD_REFETCH_MS,
+    refetchIntervalInBackground: false,
   });
 
   if (summary.isError) {

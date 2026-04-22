@@ -58,6 +58,29 @@ const ACTION_TONE: Record<string, "ok" | "warning" | "danger" | "info" | "neutra
   seed: "neutral",
 };
 
+// Known action values — surfaced in the action filter dropdown. Server-side
+// accepts any string, so "__other__" prompts a plain text field.
+const ACTION_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "액션: 전체" },
+  { value: "ingest", label: "ingest" },
+  { value: "bulk_ingest", label: "bulk_ingest" },
+  { value: "classify", label: "classify" },
+  { value: "reclassify", label: "reclassify" },
+  { value: "clarify", label: "clarify" },
+  { value: "evaluate", label: "evaluate" },
+  { value: "re_evaluate", label: "re_evaluate" },
+  { value: "re_evaluate_after_clarify", label: "re_evaluate_after_clarify" },
+  { value: "generate", label: "generate" },
+  { value: "regenerate", label: "regenerate" },
+  { value: "approve", label: "approve" },
+  { value: "publish", label: "publish" },
+  { value: "reject", label: "reject" },
+  { value: "create", label: "create" },
+  { value: "update", label: "update" },
+  { value: "delete", label: "delete" },
+  { value: "seed", label: "seed" },
+];
+
 export function AuditList() {
   const [offset, setOffset] = useState(0);
   const [entityType, setEntityType] = useState<(typeof ENTITY_TYPES)[number]>("");
@@ -150,15 +173,20 @@ export function AuditList() {
             setOffset(0);
           }}
         />
-        <input
+        <select
           className={inputCls}
-          placeholder="action 예: clarify"
           value={action}
           onChange={(e) => {
             setAction(e.target.value);
             setOffset(0);
           }}
-        />
+        >
+          {ACTION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
         <input
           className={inputCls}
           placeholder="actor 예: system"
