@@ -1,4 +1,5 @@
 import { IngestionCard } from "./_components/ingestion-card";
+import { PolicyRulesEditor } from "./_components/policy-rules-editor";
 import { PolicyRulesViewer } from "./_components/policy-rules-viewer";
 
 export default function SettingsPage() {
@@ -12,6 +13,7 @@ export default function SettingsPage() {
       </header>
       <IngestionCard />
       <PolicyRulesViewer />
+      <PolicyRulesEditor />
     </div>
   );
 }

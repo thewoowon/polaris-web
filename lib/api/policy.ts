@@ -36,3 +36,28 @@ export type PolicyRulesDoc = z.infer<typeof policyRulesDocSchema>;
 export function getPolicyRules(): Promise<PolicyRulesDoc> {
   return api.get("/api/v1/policy/rules", { schema: policyRulesDocSchema });
 }
+
+const rulesRawSchema = z.object({
+  path: z.string(),
+  yaml: z.string(),
+});
+export type PolicyRulesRaw = z.infer<typeof rulesRawSchema>;
+
+export function getPolicyRulesRaw(): Promise<PolicyRulesRaw> {
+  return api.get("/api/v1/policy/rules/raw", { schema: rulesRawSchema });
+}
+
+const rulesValidationSchema = z.object({
+  ok: z.boolean(),
+  rule_count: z.number().int(),
+  version: z.string().nullable().optional(),
+});
+export type PolicyRulesValidation = z.infer<typeof rulesValidationSchema>;
+
+export function validatePolicyRules(yaml: string): Promise<PolicyRulesValidation> {
+  return api.post("/api/v1/policy/rules/validate", { yaml }, { schema: rulesValidationSchema });
+}
+
+export function savePolicyRules(yaml: string): Promise<PolicyRulesValidation> {
+  return api.put("/api/v1/policy/rules/raw", { yaml }, { schema: rulesValidationSchema });
+}
