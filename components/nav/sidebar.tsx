@@ -12,10 +12,11 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "대시보드" },
+  { href: "/companies", label: "Companies" },
+  { href: "/apps", label: "Apps" },
+  { href: "/benchmarks", label: "Benchmarks" },
+  { href: "/reports", label: "Reports" },
   { href: "/reviews", label: "리뷰" },
-  { href: "/queue", label: "검수 큐" },
-  { href: "/kb", label: "지식 베이스" },
-  { href: "/audit", label: "감사 로그" },
   { href: "/settings", label: "설정" },
 ];
 
@@ -29,7 +30,7 @@ export function Sidebar() {
           <span className="inline-block h-6 w-6 rounded bg-zinc-900 dark:bg-zinc-100" />
           <span className="font-semibold tracking-tight">Polaris</span>
         </Link>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">VOC Control</p>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">App Review Intelligence</p>
       </div>
       <nav className="flex-1 space-y-0.5 px-3">
         {NAV_ITEMS.map((item) => {
