@@ -187,6 +187,24 @@ export function AppsTable() {
                   <option value="android">Android</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">Play Store 패키지명</label>
+                <input
+                  className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 text-sm bg-white dark:bg-zinc-900"
+                  value={form.play_store_package ?? ""}
+                  onChange={(e) => setForm({ ...form, play_store_package: e.target.value || undefined })}
+                  placeholder="예: com.kakaobank.channel"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1">App Store ID</label>
+                <input
+                  className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 text-sm bg-white dark:bg-zinc-900"
+                  value={form.app_store_id ?? ""}
+                  onChange={(e) => setForm({ ...form, app_store_id: e.target.value || undefined })}
+                  placeholder="예: 1483145867"
+                />
+              </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.is_target} onChange={(e) => setForm({ ...form, is_target: e.target.checked })} />

@@ -14,6 +14,7 @@ export type AppProfile = {
   country: string;
   is_target: boolean;
   is_competitor: boolean;
+  ingestion_enabled: boolean;
   review_count: number;
   average_rating: number | null;
   negative_ratio: number | null;
@@ -30,7 +31,10 @@ export type AppCreate = {
   category?: string;
   is_target?: boolean;
   is_competitor?: boolean;
+  ingestion_enabled?: boolean;
 };
+
+export type AppUpdate = Partial<AppCreate>;
 
 export type AppPage = {
   items: AppProfile[];
@@ -98,8 +102,8 @@ export const appsApi = {
   create: (body: AppCreate) =>
     api.post<AppProfile>("/api/v1/apps", body),
 
-  update: (id: string, body: Partial<AppCreate>) =>
-    api.put<AppProfile>(`/api/v1/apps/${id}`, body),
+  update: (id: string, body: AppUpdate) =>
+    api.patch<AppProfile>(`/api/v1/apps/${id}`, body),
 
   delete: (id: string) =>
     api.delete<void>(`/api/v1/apps/${id}`),

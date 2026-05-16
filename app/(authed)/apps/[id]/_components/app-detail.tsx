@@ -43,6 +43,11 @@ export function AppDetail({ appId }: { appId: string }) {
     period_start: "2026-01-01",
     period_end: "2026-05-31",
   });
+  const [ingestionEdit, setIngestionEdit] = useState<{
+    play_store_package: string;
+    app_store_id: string;
+    ingestion_enabled: boolean;
+  } | null>(null);
 
   const { data: app, isLoading: appLoading } = useQuery({
     queryKey: ["apps", appId],
@@ -75,6 +80,15 @@ export function AppDetail({ appId }: { appId: string }) {
   const insightMut = useMutation({
     mutationFn: () => appsApi.generateInsights(appId),
     onSuccess: () => refetchInsights(),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: (body: Parameters<typeof appsApi.update>[1]) =>
+      appsApi.update(appId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["apps", appId] });
+      setIngestionEdit(null);
+    },
   });
 
   const reportMut = useMutation({
@@ -153,6 +167,98 @@ export function AppDetail({ appId }: { appId: string }) {
             <p className="text-xs text-zinc-400 self-center">클러스터를 먼저 생성하세요.</p>
           )}
         </div>
+      </Card>
+
+      {/* Ingestion Settings */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium">수집 설정</h2>
+          {ingestionEdit ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setIngestionEdit(null)}>취소</Button>
+              <Button
+                onClick={() => updateMut.mutate(ingestionEdit)}
+                disabled={updateMut.isPending}
+              >
+                {updateMut.isPending ? "저장 중..." : "저장"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setIngestionEdit({
+                  play_store_package: app.play_store_package ?? "",
+                  app_store_id: app.app_store_id ?? "",
+                  ingestion_enabled: app.ingestion_enabled,
+                })
+              }
+            >
+              편집
+            </Button>
+          )}
+        </div>
+
+        {ingestionEdit ? (
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => setIngestionEdit({ ...ingestionEdit, ingestion_enabled: !ingestionEdit.ingestion_enabled })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  ingestionEdit.ingestion_enabled ? "bg-blue-600" : "bg-zinc-300 dark:bg-zinc-600"
+                }`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                  ingestionEdit.ingestion_enabled ? "translate-x-4" : "translate-x-1"
+                }`} />
+              </div>
+              <span className="text-sm">자동 수집 활성화</span>
+            </label>
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1">Play Store 패키지명</label>
+              <input
+                className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 text-sm bg-white dark:bg-zinc-900"
+                value={ingestionEdit.play_store_package}
+                onChange={(e) => setIngestionEdit({ ...ingestionEdit, play_store_package: e.target.value })}
+                placeholder="예: com.kakaobank.channel"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1">App Store ID</label>
+              <input
+                className="w-full border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 text-sm bg-white dark:bg-zinc-900"
+                value={ingestionEdit.app_store_id}
+                onChange={(e) => setIngestionEdit({ ...ingestionEdit, app_store_id: e.target.value })}
+                placeholder="예: 1483145867"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-zinc-500 mb-0.5">자동 수집</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                app.ingestion_enabled
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-zinc-100 text-zinc-500"
+              }`}>
+                {app.ingestion_enabled ? "활성" : "비활성"}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 mb-0.5">Play Store</p>
+              <p className="text-zinc-700 dark:text-zinc-300 font-mono text-xs truncate">
+                {app.play_store_package ?? <span className="text-zinc-400">미설정</span>}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 mb-0.5">App Store ID</p>
+              <p className="text-zinc-700 dark:text-zinc-300 font-mono text-xs">
+                {app.app_store_id ?? <span className="text-zinc-400">미설정</span>}
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Clusters */}
